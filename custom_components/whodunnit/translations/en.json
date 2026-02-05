@@ -1,0 +1,41 @@
+{
+  "title": "Whodunnit",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Track Trigger Sources",
+        "description": "Select the entity you want to monitor. A diagnostic sensor will be created to show exactly what triggered the state change.",
+        "data": {
+          "targets": "Entity to Track"
+        }
+      }
+    },
+    "abort": {
+      "already_configured": "A tracker for this entity is already set up. You cannot track the same device twice."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "trigger_source": {
+        "name": "Trigger Source",
+        "state": {
+          "monitoring": "Monitoring",
+          "manual": "Manual",
+          "ui": "Dashboard/UI",
+          "scene": "Scene",
+          "automation": "Automation",
+          "script": "Script",
+          "system": "System"
+        },
+        "state_attributes": {
+          "source_type": { "name": "Source Type" },
+          "source_id": { "name": "Source ID" },
+          "source_name": { "name": "Source Name" },
+          "context_id": { "name": "Context ID" },
+          "user_id": { "name": "User ID" },
+          "event_time": { "name": "Event Time" }
+        }
+      }
+    }
+  }
+}
