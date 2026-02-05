@@ -19,6 +19,8 @@ from .const import (
     STATE_MANUAL,
     STATE_AUTOMATION,
     STATE_SYSTEM,
+    STATE_SCENE,
+    STATE_SCRIPT,
     ID_INDIRECT_AUTOMATION,
     NAME_INDIRECT_AUTOMATION,
     NAME_PHYSICAL_SWITCH,
@@ -84,6 +86,20 @@ class WhodunnitSensor(SensorEntity, RestoreEntity):
             ATTR_USER_ID: self._user_id,
             ATTR_EVENT_TIME: self._event_time
         }
+
+    @property
+    def icon(self):
+        """Dynamically change the icon based on the current trigger source."""
+        icon_map = {
+            STATE_MANUAL: "mdi:gesture-tap",
+            STATE_UI: "mdi:monitor-dashboard",
+            STATE_AUTOMATION: "mdi:robot",
+            STATE_SYSTEM: "mdi:cog",
+            STATE_MONITORING: "mdi:eye-outline",
+            STATE_SCENE: "mdi:palette",
+            STATE_SCRIPT: "mdi:script-text-outline",
+        }
+        return icon_map.get(self._state, "mdi:help-circle-outline")
 
     async def async_added_to_hass(self):
         """Restore previous state and attach event bus listeners for context capturing."""

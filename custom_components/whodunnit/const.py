@@ -27,6 +27,8 @@ STATE_MANUAL = "manual"
 STATE_UI = "ui"
 STATE_MONITORING = "monitoring"
 STATE_SYSTEM = "system"
+STATE_SCENE = "scene"
+STATE_SCRIPT = "script"
 
 # Default Values
 EVENT_TIME_DEFAULT = "None"
