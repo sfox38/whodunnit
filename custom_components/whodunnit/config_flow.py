@@ -38,7 +38,8 @@ class WhodunnitConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Define which device types are compatible with the detective logic
         supported_domains = [
             "switch", "light", "fan", "media_player", "input_boolean", 
-            "cover", "lock", "vacuum", "siren", "humidifier", "remote"
+            "cover", "lock", "vacuum", "siren", "humidifier", "climate", 
+            "valve", "remote"
         ]
 
         # Display the selection form to the user

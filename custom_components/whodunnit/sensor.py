@@ -186,11 +186,20 @@ class WhodunnitSensor(SensorEntity, RestoreEntity):
             new_s = event.data.get("new_state")
             old_s = event.data.get("old_state")
             
-            # Prevent updates if the state didn't actually change (ignores attribute-only noise)
-            if not new_s or not old_s or new_s.state == old_s.state:
+            if not new_s or not old_s:
                 return
 
             ctx = event.context
+
+            # Prevent updates if the context hasn't changed (filters out background attribute noise)
+            if ctx and ctx.id == self._context_id:
+                return
+
+            # Prevent updates if the state didn't actually change (ignores attribute-only noise)
+            # Only checked if context is missing or identical to prevent blocking climate commands
+            if new_s.state == old_s.state and (not ctx or ctx.id == self._context_id):
+                return
+
             self._event_time = dt_util.now().isoformat()
             self._context_id = ctx.id if ctx else CONTEXT_ID_DEFAULT
 

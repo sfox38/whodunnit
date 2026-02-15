@@ -20,12 +20,13 @@
         "name": "Trigger Source",
         "state": {
           "monitoring": "Monitoring",
-          "manual": "Manual",
+          "manual": "Manual/Physical",
           "ui": "Dashboard/UI",
           "scene": "Scene",
           "automation": "Automation",
           "script": "Script",
-          "system": "System"
+          "system": "System",
+          "none": "Ready"
         },
         "state_attributes": {
           "source_type": { "name": "Source Type" },

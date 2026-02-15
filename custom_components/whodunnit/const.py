@@ -36,3 +36,9 @@ SOURCE_TYPE_DEFAULT = "None"
 SOURCE_ID_DEFAULT = "None"
 USER_ID_DEFAULT = "None"
 CONTEXT_ID_DEFAULT = "None"
+
+SUPPORTED_DOMAINS = [
+    "switch", "light", "fan", "media_player", "input_boolean", 
+    "cover", "lock", "vacuum", "siren", "humidifier", "climate", 
+    "remote", "water_heater", "valve"
+]
