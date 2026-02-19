@@ -1,6 +1,6 @@
 # Whodunnit 🕵️
 
-**A Home Assistant Custom Integration — Know exactly what triggered your smart devices.**
+**A Home Assistant Custom Integration - Know exactly what triggered your smart devices.**
 
 Ever found a light on that shouldn't be, or a switch that tripped unexpectedly, and wondered: *was that an automation, someone on the dashboard, a physical button press, or something else?* Whodunnit answers that question with a dedicated diagnostic sensor for each entity you choose to monitor. Whodunnit itself can also be used to trigger automations which depend on the source context. 
 
@@ -32,7 +32,7 @@ Ever found a light on that shouldn't be, or a switch that tripped unexpectedly, 
 
 ## What It Does
 
-Whodunnit creates a **diagnostic sensor** for any supported entity in your Home Assistant setup. Each time that entity changes state — or a meaningful attribute changes (such as brightness or colour) — the Whodunnit sensor updates to record:
+Whodunnit creates a **diagnostic sensor** for any supported entity in your Home Assistant setup. Each time that entity changes state - or a meaningful attribute changes (such as brightness or colour) - the Whodunnit sensor updates to record:
 
 - **What** caused the change (automation, script, scene, dashboard, physical press, service account, or the system itself)
 - **Who** did it (the person's name if triggered via the UI)
@@ -58,15 +58,15 @@ Whodunnit listens to automation, script, and scene events *before* they fire the
 
 **The detection cascade works in this order:**
 
-1. **Cache hit on the context ID** → The state change was caused by an automation, script, or scene that Whodunnit pre-cached. This is a direct, reliable match. *Confidence: High.*
+1. **Cache hit on the context ID** -> The state change was caused by an automation, script, or scene that Whodunnit pre-cached. This is a direct, reliable match. *Confidence: High.*
 
-2. **No cache hit, but a `user_id` is on the context** → A user acted directly via the dashboard, mobile app, or similar UI. Whodunnit resolves the user ID to a friendly name. If the user ID belongs to a service account (Node-RED, AppDaemon, a custom script, etc.) rather than a real person, it is classified as a **Service Account** trigger instead. *Confidence: High (or Low on hardware platforms susceptible to context bleed — see [Caveats](#caveats-and-limitations)).*
+2. **No cache hit, but a `user_id` is on the context** -> A user acted directly via the dashboard, mobile app, or similar UI. Whodunnit resolves the user ID to a friendly name. If the user ID belongs to a service account (Node-RED, AppDaemon, a custom script, etc.) rather than a real person, it is classified as a **Service Account** trigger instead. *Confidence: High (or Low on hardware platforms susceptible to context bleed - see [Caveats](#caveats-and-limitations)).*
 
-3. **No cache hit, but a `parent_id` exists** → HA was involved (something upstream caused this), but the specific source wasn't in Whodunnit's cache — for example, a sub-automation called by another automation. It is classified as an **Indirect Automation**. *Confidence: Medium.*
+3. **No cache hit, but a `parent_id` exists** -> HA was involved (something upstream caused this), but the specific source wasn't in Whodunnit's cache - for example, a sub-automation called by another automation. It is classified as an **Indirect Automation**. *Confidence: Medium.*
 
-4. **No user, no parent, no cache hit** → The change originated entirely from the device with no Home Assistant involvement. Physical button presses, remote controls, hardware timers (inching), and device-internal firmware events all land here, classified as **Physical / Internal**. *Confidence: High.*
+4. **No user, no parent, no cache hit** -> The change originated entirely from the device with no Home Assistant involvement. Physical button presses, remote controls, hardware timers (inching), and device-internal firmware events all land here, classified as **Physical / Internal**. *Confidence: High.*
 
-> **Note on attribute-only changes:** Whodunnit also fires when a state stays the same but a monitored attribute changes — for example, dimming a light without turning it on or off. The same detection cascade applies. To avoid flooding the log on continuously-changing sensors, attribute-only changes are rate-limited to one update per second per entity.
+> **Note on attribute-only changes:** Whodunnit also fires when a state stays the same but a monitored attribute changes - for example, dimming a light without turning it on or off. The same detection cascade applies. To avoid flooding the log on continuously-changing sensors, attribute-only changes are rate-limited to one update per second per entity.
 
 ---
 
@@ -119,11 +119,11 @@ Each Whodunnit sensor exposes the following attributes:
 The `history_log` attribute stores a rolling list of the last **25 trigger events**, newest first. Each entry in the log contains:
 
 ```
-event_time    — ISO timestamp of the event
-source_type   — Category of trigger
-source_id     — Entity or user ID of the trigger
-source_name   — Human-readable name
-confidence    — High / Medium / Low
+event_time    - ISO timestamp of the event
+source_type   - Category of trigger
+source_id     - Entity or user ID of the trigger
+source_name   - Human-readable name
+confidence    - High / Medium / Low
 ```
 
 The log is persisted across Home Assistant restarts. You can inspect it directly on the entity's Attributes tab, access it in templates and automations, or display it using the History Log dashboard card described in the [Use Cases](#use-cases) section below.
@@ -152,12 +152,12 @@ The log is persisted across Home Assistant restarts. You can inspect it directly
 
 After installation and a restart, Whodunnit is available as an integration:
 
-1. Go to **Settings → Devices & Services**.
+1. Go to **Settings -> Devices & Services**.
 2. Click **+ Add Integration** and search for **Whodunnit**.
 3. Select the entity you want to monitor from the dropdown picker and click **Submit**.
 4. Whodunnit creates a sensor and attaches it to the entity's parent device page.
 
-You can add Whodunnit to as many entities as you like — including multiple entities on the same physical device. Each tracked entity gets its own config entry and its own sensor. Already-tracked entities are automatically hidden from the picker to prevent duplicates.
+You can add Whodunnit to as many entities as you like - including multiple entities on the same physical device. Each tracked entity gets its own config entry and its own sensor. Already-tracked entities are automatically hidden from the picker to prevent duplicates.
 
 ### Supported Entity Types
 
@@ -185,15 +185,15 @@ Helper entities (`input_boolean`, `input_select`, etc.) do not belong to a physi
 
 ### Debugging
 
-A quick look at the Whodunnit sensor on any device's page instantly tells you how the device was last activated. Expand the attributes for the full picture — who, what, when, and how confident the answer is.
+A quick look at the Whodunnit sensor on any device's page instantly tells you how the device was last activated. Expand the attributes for the full picture - who, what, when, and how confident the answer is.
 
 <table border="0"><tr><td width="50%" valign="top"><img src="https://github.com/sfox38/whodunnit/blob/main/images/sensor.png" width="100%"></td>
 <td width="50%" valign="top"><img src="https://github.com/sfox38/whodunnit/blob/main/images/attributes.png" width="100%"></td></tr></table>
 
 **Common debugging scenarios:**
-- *"Why did my bedroom light turn on at 3 am?"* — Check `source_name` to see which automation was responsible.
-- *"Did someone manually turn this off, or did an automation do it?"* — `source_type: physical` vs `source_type: automation` answers this immediately.
-- *"Which Node-RED flow is affecting this switch?"* — Service account triggers display the HA username of the account, helping you trace the flow.
+- *"Why did my bedroom light turn on at 3 am?"* - Check `source_name` to see which automation was responsible.
+- *"Did someone manually turn this off, or did an automation do it?"* - `source_type: physical` vs `source_type: automation` answers this immediately.
+- *"Which Node-RED flow is affecting this switch?"* - Service account triggers display the HA username of the account, helping you trace the flow.
 
 ---
 
@@ -206,7 +206,7 @@ A quick look at the Whodunnit sensor on any device's page instantly tells you ho
 
 ```yaml
 ##############################################################################
-# Whodunnit — Basic Status Card
+# Whodunnit - Basic Status Card
 # Change ONLY the entity ID on the "&target" line below.
 ##############################################################################
 type: entities
@@ -265,7 +265,7 @@ Change only the `entity_id` variable on the first line of the `content` block.
 
 ```yaml
 ##############################################################################
-# Whodunnit — History Log Card
+# Whodunnit - History Log Card
 # Requires: custom:html-template-card (HACS)
 # Change ONLY the entity_id variable on the first line of the content block.
 ##############################################################################
@@ -369,7 +369,7 @@ content: |
              style="color:{{ cur_color }};background:{{ cur_color }}22;border-color:{{ cur_color }}55;">
           {{ cur_label }}
         </div>
-        <div class="wd-ts">{{ cur_time[:19] | replace('T', ', ') if cur_time else '—' }}</div>
+        <div class="wd-ts">{{ cur_time[:19] | replace('T', ', ') if cur_time else '-' }}</div>
       </div>
     </div>
 
@@ -400,7 +400,7 @@ content: |
           {%- set el     = type_labels.get(entry.source_type,   entry.source_type | title) -%}
           {%- set ecc    = conf_colors.get(entry.confidence,    '#5ce0a0') -%}
           {%- set ecs    = conf_symbols.get(entry.confidence,   '&#9679;') -%}
-          {%- set ets    = entry.event_time[:19] | replace('T', ', ') if entry.event_time else '—' -%}
+          {%- set ets    = entry.event_time[:19] | replace('T', ', ') if entry.event_time else '-' -%}
           {%- set e_name = entry.source_name | truncate(32, true, '…') -%}
           {%- set e_id   = entry.source_id   | truncate(38, true, '…') -%}
           {%- set idx    = loop.index -%}
@@ -472,7 +472,7 @@ This prevents a common frustration: you turn a light on at the wall, then the mo
 
 ```yaml
 automation:
-  - alias: "Smart motion off — respect manual control"
+  - alias: "Smart motion off - respect manual control"
     trigger:
       - platform: state
         entity_id: binary_sensor.office_motion
@@ -531,7 +531,7 @@ automation:
             Brightness adjusted by
             {{ state_attr('sensor.living_room_light_trigger_source', 'source_name') }}
             ({{ states('sensor.living_room_light_trigger_source') }})
-            — current brightness:
+            - current brightness:
             {{ state_attr('light.living_room', 'brightness') | int | multiply(100) | divide(255) | round }}%.
 ```
 
