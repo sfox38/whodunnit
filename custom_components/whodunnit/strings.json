@@ -17,15 +17,17 @@
   "entity": {
     "sensor": {
       "trigger_source": {
-        "name": "Trigger Source",
+        "name": "{target} Trigger Source",
         "state": {
           "monitoring": "Monitoring",
-          "manual": "Manual",
+          "manual": "Manual/Internal",
           "ui": "Dashboard/UI",
           "scene": "Scene",
           "automation": "Automation",
           "script": "Script",
-          "system": "System"
+          "system": "System",
+          "service": "Service Account",
+          "none": "Ready"
         },
         "state_attributes": {
           "source_type": { "name": "Source Type" },
@@ -33,7 +35,16 @@
           "source_name": { "name": "Source Name" },
           "context_id": { "name": "Context ID" },
           "user_id": { "name": "User ID" },
-          "event_time": { "name": "Event Time" }
+          "event_time": { "name": "Event Time" },
+          "confidence": {
+            "name": "Confidence",
+            "state": {
+              "high": "High",
+              "medium": "Medium",
+              "low": "Low"
+            }
+          },
+          "history_log": { "name": "History Log" }
         }
       }
     }
