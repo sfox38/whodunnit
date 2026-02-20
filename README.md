@@ -26,7 +26,7 @@ Ever found a light on that shouldn't be, or a switch that tripped unexpectedly, 
   - [Dashboard Cards](#dashboard-cards)
   - [Automations](#automations)
 - [Caveats and Limitations](#caveats-and-limitations)
-- [What's New](#whats-new-in-v11-19-feb-2026)
+- [What's New](#version-111)
 
 ---
 
@@ -577,8 +577,17 @@ Home Assistant has some quirks that may affect Whodunnit's accuracy in specific,
 **Physical vs. Internal Events:** When `source_type` is `physical`, the trigger could be either a genuine physical button press or a device-internal firmware event (such as an inching/auto-off timer). Home Assistant does not distinguish between these at the context level, so Whodunnit cannot either.
 
 ---
+## Version 1.1.1
+20 February 2026
 
-## What's new in v1.1 (19 Feb 2026)
+* Bug fixes:
+  * Physical button presses being silently dropped on ESPHome devices within the bleed window
+  * Dashboard toggles on ESPHome devices always showing Low confidence
+* General ESPHome related improvements to the detection cascade
+* Added` context_id` to the `history_log` for easier event correlation
+ 
+## Version v1.1
+19 February 2026
 
 * Added support for more domains : climate, water_heater, valve, number, select, button, input_button, input_number, input_select, input_text, alarm_control_panel, timer
 * Added attribute changes as a trigger source
