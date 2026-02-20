@@ -20,8 +20,16 @@ How HA context chaining works (essential background):
   identify the source.
 
 Detection cascade (in _handle_change):
-  1. Context ID found in cache        → Automation / Script / Scene
-  2. Context has a user_id            → Dashboard / UI action by a named user
+  1. Context ID found in cache        → Automation / Script / Scene / UI action.
+                                        For STATE_UI cache entries on bleed platforms
+                                        (ESPHome), a "seen" flag distinguishes the
+                                        genuine first hit (HIGH) from subsequent hits
+                                        where ESPHome reuses the context ID for a
+                                        physical press in the bleed window (LOW).
+  2. Context has a user_id (no cache) → Dashboard / UI action by a named user.
+                                        On ESPHome, genuine dashboard actions are
+                                        caught by Step 1; reaching Step 2 with a
+                                        user_id is an edge case, classified HIGH.
   3. Context has a parent_id (no cache hit) → Indirect automation (context chain
                                               exists but the trigger wasn't cached,
                                               e.g. a sub-automation)
@@ -214,6 +222,8 @@ class WhodunnitSensor(SensorEntity, RestoreEntity):
         # Timestamp of the last cache cleanup pass. Used to time-gate cleanup
         # so it doesn't run on every single service-call event.
         self._last_cleanup = 0
+
+
 
     def _get_clean_target_name(self) -> str:
         """Derive the display name for the sensor title from the target entity.
@@ -435,12 +445,20 @@ class WhodunnitSensor(SensorEntity, RestoreEntity):
 
     @callback
     def _record_service_context(self, event):
-        """Cache a service call event for automation, script, or scene domains.
+        """Cache a service call event by context ID for later lookup in _handle_change.
 
-        Called for every EVENT_CALL_SERVICE event. Only caches entries for the
-        domains we care about (automation, script, scene) and only if that
-        context ID isn't already in the cache (to avoid overwriting a more
-        specific entry from _record_logic_trigger).
+        Called for every EVENT_CALL_SERVICE event. Handles two cases:
+
+        1. Logic domains (automation, script, scene): cache the triggering entity
+           and type so _handle_change can identify the source. Skips if the context
+           is already recorded  -  _record_logic_trigger entries are more specific.
+
+        2. User-initiated device domains (e.g. light.turn_on from the dashboard):
+           cache with type=STATE_UI so _handle_change Step 1 can identify this as
+           a confirmed genuine HA action. On ESPHome (bleed platform), the device
+           reuses this same context ID for physical presses during the bleed window;
+           the "seen" flag in Step 1 distinguishes the genuine first hit (HIGH) from
+           subsequent bled hits (LOW).
 
         The @callback decorator marks this as a synchronous HA scheduler
         callback. It must not await or perform blocking I/O.
@@ -492,18 +510,35 @@ class WhodunnitSensor(SensorEntity, RestoreEntity):
                     "timestamp": time.time()
                 }
 
+        elif ctx.user_id and ctx.id not in self._cache:
+            # A user-initiated service call on a device domain (e.g. light.turn_on).
+            # Cache the context ID so _handle_change Step 1 can recognise it as a
+            # confirmed genuine HA action. On bleed platforms, ESPHome reuses this
+            # same context ID for physical presses during the bleed window  -  Step 1
+            # detects subsequent hits via a "seen" flag and classifies them LOW.
+            self._cache[ctx.id] = {
+                "id": ctx.user_id,
+                "name": "",
+                "type": STATE_UI,
+                "timestamp": time.time()
+            }
+
     def _is_bleed_platform(self) -> bool:
         """Return True if the target entity belongs to a platform known to bleed context.
 
-        ESPHome (and potentially other local-push platforms) reuse the last
-        context ID received from HA for a short window when reporting their own
-        state changes. This means a physical button press shortly after a HA
-        command can carry that command's context, causing a false classification.
+        ESPHome (and potentially other local-push platforms) reuse the last HA-sent
+        context ID for physical events that occur within a short window after a HA
+        command. This means a physical button press shortly after a dashboard action
+        carries the same context ID as that action, causing a false classification.
 
-        We detect this by checking the entity's registered platform. If the
-        platform is in BLEED_PLATFORMS (defined in const.py), any context-based
-        classification is subject to confidence downgrade when the cache entry
-        is older than ESPHOME_BLEED_THRESHOLD seconds.
+        Two detection strategies are used depending on the source type:
+          - STATE_UI cache hits: a "seen" flag distinguishes the genuine first event
+            from subsequent bled physical presses reusing the same context ID.
+          - Automation/script/scene cache hits: cache-age comparison against
+            ESPHOME_BLEED_THRESHOLD (defined in const.py).
+
+        We detect bleed-platform membership by checking the entity's registered
+        platform against BLEED_PLATFORMS (defined in const.py).
         """
         ent_reg = er.async_get(self.hass)
         entry = ent_reg.async_get(self._target_entity)
@@ -557,9 +592,16 @@ class WhodunnitSensor(SensorEntity, RestoreEntity):
 
             ctx = event.context
 
+            is_bleed = self._is_bleed_platform()
+
             # Skip if this event shares the same context as the last one we
             # processed  -  prevents double-counting a single logical action.
-            if ctx and ctx.id == self._context_id:
+            # On bleed platforms (e.g. ESPHome) the device reuses the last
+            # HA-sent context ID for physical events during the bleed window,
+            # so the same context ID can legitimately represent two distinct
+            # events (the HA command and a subsequent hardware press). We must
+            # NOT skip on bleed platforms, or the physical press is silently dropped.
+            if ctx and ctx.id == self._context_id and not is_bleed:
                 return
 
             # Record when this change was detected.
@@ -582,30 +624,57 @@ class WhodunnitSensor(SensorEntity, RestoreEntity):
             if ctx:
                 owner = self._cache.get(ctx.id)
 
-            is_bleed = self._is_bleed_platform()
-
             if owner:
-                # A cached automation, script, or scene triggered this change.
-                # Check for possible context bleed on hardware platforms: if the
-                # cache entry is older than the bleed threshold and the entity is
-                # on a known bleed platform, downgrade confidence to low because
-                # a physical press may have inherited this stale context.
-                cache_age = time.time() - owner.get("timestamp", 0)
-                if is_bleed and cache_age > ESPHOME_BLEED_THRESHOLD:
-                    self._confidence = CONFIDENCE_LOW
+                # A confirmed HA-originated action matched this context ID.
+                # Two sub-cases based on the cached type:
+                #
+                # (a) STATE_UI: a dashboard toggle cached by _record_service_context.
+                #     This is a genuine user action. On bleed platforms, ESPHome
+                #     reuses the same context ID for physical presses in the bleed
+                #     window  -  a "seen" flag distinguishes the first (genuine, HIGH)
+                #     from subsequent hits (bled physical press, LOW).
+                #
+                # (b) automation/script/scene: use cache-age bleed detection.
+                #     These triggers may fire their service call well before the
+                #     state change arrives, so cache_age is a reliable signal.
+                #
+                # Non-bleed platforms always HIGH on any cache hit.
+                if owner["type"] == STATE_UI:
+                    p_id, p_name, is_service_account = await self._get_person_cached(owner["id"])
+                    # On bleed platforms, ESPHome reuses the same context ID for
+                    # physical presses during the bleed window. The first time we
+                    # see this context ID it is the genuine dashboard action → HIGH.
+                    # Subsequent hits with the same context ID are bled physical
+                    # presses → LOW. We track this with a "seen" flag on the cache
+                    # entry. On non-bleed platforms every context ID is unique so
+                    # we always classify HIGH.
+                    already_seen = owner.get("seen", False)
+                    owner["seen"] = True
+                    self._confidence = CONFIDENCE_LOW if (is_bleed and already_seen) else CONFIDENCE_HIGH
+                    self._state = STATE_SERVICE if is_service_account else STATE_UI
+                    self._source_type = "service" if is_service_account else "user"
+                    self._source_id = owner["id"] if is_service_account else (p_id or owner["id"])
+                    self._source_name = p_name
                 else:
-                    self._confidence = CONFIDENCE_HIGH
-                self._state = owner["type"]
-                self._source_type = owner["type"]
-                self._source_id = owner["id"]
-                self._source_name = owner["name"]
+                    cache_age = time.time() - owner.get("timestamp", 0)
+                    if is_bleed and cache_age < ESPHOME_BLEED_THRESHOLD:
+                        self._confidence = CONFIDENCE_LOW
+                    else:
+                        self._confidence = CONFIDENCE_HIGH
+                    self._state = owner["type"]
+                    self._source_type = owner["type"]
+                    self._source_id = owner["id"]
+                    self._source_name = owner["name"]
 
             elif ctx and ctx.user_id:
                 # Step 2: No cache hit, but a user_id is present on the context.
                 # Resolve the user to determine whether this is a human (Dashboard/UI)
                 # or a service account (Node-RED, AppDaemon, etc.).
-                # On bleed platforms, any user_id-based classification is downgraded
-                # to low confidence since it may be inherited context.
+                #
+                # On ESPHome (bleed platform), genuine dashboard actions are caught
+                # by Step 1 via the cached call_service event. Reaching Step 2 with
+                # a user_id is an edge case (e.g. service event arrived out of order).
+                # Classify HIGH  -  we have a definitive user_id and no bleed signal.
                 p_id, p_name, is_service_account = await self._get_person_cached(ctx.user_id)
 
                 if is_service_account:
@@ -613,14 +682,14 @@ class WhodunnitSensor(SensorEntity, RestoreEntity):
                     # service account tool (Node-RED, AppDaemon, custom script, etc.).
                     # source_name carries the HA username so the user can identify
                     # which tool caused the trigger.
-                    self._confidence = CONFIDENCE_LOW if is_bleed else CONFIDENCE_HIGH
+                    self._confidence = CONFIDENCE_HIGH
                     self._state = STATE_SERVICE
                     self._source_type = "service"
                     self._source_id = ctx.user_id
                     self._source_name = p_name
                 else:
                     # A human user acting via the dashboard or app.
-                    self._confidence = CONFIDENCE_LOW if is_bleed else CONFIDENCE_HIGH
+                    self._confidence = CONFIDENCE_HIGH
                     self._state = STATE_UI
                     self._source_type = "user"
                     self._source_id = p_id or ctx.user_id
@@ -659,6 +728,7 @@ class WhodunnitSensor(SensorEntity, RestoreEntity):
                 ATTR_SOURCE_ID: self._source_id,
                 ATTR_SOURCE_NAME: self._source_name,
                 ATTR_CONFIDENCE: self._confidence,
+                ATTR_CONTEXT_ID: self._context_id,
             })
 
             # Push the updated state and attributes to HA.
