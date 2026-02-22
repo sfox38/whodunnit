@@ -12,6 +12,7 @@ ATTR_USER_ID = "user_id"
 ATTR_EVENT_TIME = "event_time"
 ATTR_CONFIDENCE = "confidence"
 ATTR_HISTORY_LOG = "history_log"
+ATTR_CACHE_DEBUG = "cache_debug"
 
 # Confidence levels
 CONFIDENCE_HIGH = "high"
@@ -38,22 +39,57 @@ BLEED_PLATFORMS = frozenset({"esphome"})
 # Identity Constants
 ID_INDIRECT_AUTOMATION = "automation.indirect"
 NAME_INDIRECT_AUTOMATION = "Automation (Indirect)"
-NAME_PHYSICAL_INTERNAL = "Physical / Internal"
+NAME_DEVICE = "Device"
 NAME_READY = "None"
 NAME_UNKNOWN_USER = "Unknown User"
-NAME_SYSTEM_SOURCE = "System (Time/Event)"
 NAME_TRACKER_PREFIX = "Whodunnit"
 NAME_SERVICE_ACCOUNT = "Service Account"
 
 # State Slugs (Matching strings.json)
+# These are the values written to the sensor's native_value (the primary state).
 STATE_AUTOMATION = "automation"
-STATE_MANUAL = "manual"
+STATE_DEVICE = "device"
 STATE_UI = "ui"
 STATE_MONITORING = "monitoring"
-STATE_SYSTEM = "system"
 STATE_SCENE = "scene"
 STATE_SCRIPT = "script"
 STATE_SERVICE = "service"
+
+# Source Type Values
+# These are written to the source_type attribute and describe the category of
+# the trigger source. They are distinct from the State Slugs above  -  the state
+# slug describes the trigger mechanism (e.g. "ui"), while source_type describes
+# the source category (e.g. "user"). Both are useful in automations but serve
+# different purposes.
+SOURCE_TYPE_USER = "user"           # Human acting via dashboard or app
+SOURCE_TYPE_DEVICE = "device"       # Device-originated: physical press or internal event
+SOURCE_TYPE_SERVICE = "service"     # Service account (Node-RED, AppDaemon, etc.)
+# Note: automation, scene, and script source_type values reuse the STATE_* slugs
+# above (STATE_AUTOMATION, STATE_SCENE, STATE_SCRIPT) since they are identical.
+
+# Event name fired by Whodunnit after every successful trigger classification.
+# Automations can use this as a trigger instead of watching the sensor state,
+# which is necessary when the same source fires repeatedly (e.g. the same
+# script runs twice in a row) because the sensor state value does not change
+# between identical consecutive classifications  -  only event_time changes.
+#
+# Example automation trigger:
+#   trigger:
+#     - platform: event
+#       event_type: whodunnit_trigger_detected
+#       event_data:
+#         entity_id: light.my_light   # optional: filter by tracked entity
+#
+# Event payload fields:
+#   entity_id    - the tracked entity that changed (e.g. "light.garage")
+#   state        - the trigger source slug (e.g. "script", "ui", "device")
+#   source_type  - source category (e.g. "user", "device", "script")
+#   source_id    - entity or person ID of the source
+#   source_name  - human-readable source name
+#   confidence   - "high", "medium", or "low"
+#   context_id   - HA context ID of the triggering event
+#   event_time   - ISO timestamp of the classification
+EVENT_TRIGGER_DETECTED = "whodunnit_trigger_detected"
 
 # Default Values
 EVENT_TIME_DEFAULT = "None"
@@ -63,7 +99,7 @@ USER_ID_DEFAULT = "None"
 CONTEXT_ID_DEFAULT = "None"
 
 SUPPORTED_DOMAINS = [
-    # Physical device domains
+    # Trackable device domains
     "switch", "light", "fan", "media_player",
     "cover", "lock", "vacuum", "siren", "humidifier", "climate",
     "remote", "water_heater", "valve",

@@ -20,14 +20,12 @@
         "name": "{target} Trigger Source",
         "state": {
           "monitoring": "Monitoring",
-          "manual": "Manual/Internal",
+          "device": "Device",
           "ui": "Dashboard/UI",
           "scene": "Scene",
           "automation": "Automation",
           "script": "Script",
-          "system": "System",
-          "service": "Service Account",
-          "none": "Ready"
+          "service": "Service Account"
         },
         "state_attributes": {
           "source_type": { "name": "Source Type" },
@@ -44,7 +42,8 @@
               "low": "Low"
             }
           },
-          "history_log": { "name": "History Log" }
+          "history_log": { "name": "History Log" },
+          "cache_debug": { "name": "Cache Debug" }
         }
       }
     }
