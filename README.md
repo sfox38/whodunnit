@@ -174,7 +174,7 @@ Read-only sensor entities are intentionally excluded because their state is driv
 
 ### Helper and Virtual Devices
 
-Helper entities (Templated devices, `input_select`, *Change device type of a switch*, etc.) do not belong to a physical device. For these, Whodunnit automatically creates a **virtual device** to host the sensor in the HA UI. This virtual device appears in the Devices list under the Whodunnit integration and is automatically removed when you delete the Whodunnit entry for that helper.
+Helper entities (Templated devices, `input_select`, `input_number`, etc.) usually do not belong to a physical device. For these, Whodunnit automatically creates a **virtual device** to host the sensor in the HA UI. This virtual device appears in the Devices list under the Whodunnit integration and is automatically removed when you delete the Whodunnit entry for that helper.
 
 ---
 
