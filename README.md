@@ -714,6 +714,11 @@ Home Assistant has some quirks that may affect Whodunnit's accuracy in specific,
 ---
 ## History
 
+### Version 1.2.1
+16 March 2026
+
+* Version bump to include the brand icons for Home Assistant 2026.3 and up.
+
 ### Version 1.2
 22 February 2026
 
