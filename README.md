@@ -715,7 +715,7 @@ Home Assistant has some quirks that may affect Whodunnit's accuracy in specific,
 ## History
 
 ### Version 1.3.0
-30 April 2026
+1 May 2026
 
 * **Architecture:** Replaced per-sensor global event listeners with a single shared listener set. Previously, each tracked entity registered its own listeners for all automation, script, and service call events system-wide, scaling as O(N). Now a single set of listeners populates a shared context cache that all sensors read from.
 * Fixed a race condition where rapid consecutive state changes during a user identity lookup could produce a sensor state mixing fields from two different events.
